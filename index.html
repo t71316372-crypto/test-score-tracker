@@ -1,34 +1,492 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>テストのきろく</title><style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#24324a;background:#f4f8ff}*{box-sizing:border-box}body{margin:0}.wrap{max-width:760px;margin:auto;padding:18px 15px 60px}h1{font-size:27px;margin:8px 0}h2{font-size:19px;margin:0 0 15px}.sub{color:#6b7890;font-size:14px}.card{background:white;border-radius:22px;padding:21px;margin:16px 0;box-shadow:0 5px 20px #28466b0c}.top{display:flex;align-items:center;justify-content:space-between;gap:10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.metric{background:#edf5ff;border-radius:16px;padding:16px}.metric strong{font-size:27px;display:block;color:#2259b4}.field{display:block;margin:13px 0;font-weight:700;font-size:14px}input,select{width:100%;padding:13px;border:2px solid #dce5f3;border-radius:13px;font-size:17px;background:white;margin-top:6px;color:#24324a}button{border:0;border-radius:13px;padding:13px 19px;background:#3477dc;color:white;font-size:16px;font-weight:750;cursor:pointer}button.secondary{background:#e8f0fb;color:#2855a0}button.danger{background:#ffe7e7;color:#a93232}button.small{font-size:13px;padding:8px 11px}button:disabled{opacity:.55}.actions{display:flex;gap:9px;flex-wrap:wrap}.hide{display:none!important}.msg{min-height:23px;color:#bb3547;font-size:14px}.success{color:#13825c}.entry{border-top:1px solid #e9edf5;padding:14px 0;display:flex;justify-content:space-between;align-items:center;gap:10px}.entry strong{font-size:17px}.entry .sub{overflow-wrap:anywhere}.score{font-size:21px;font-weight:800;color:#285ab3;white-space:nowrap}.bar{height:12px;background:#e6ecf5;border-radius:20px;overflow:hidden}.fill{height:100%;background:#48a6dc;border-radius:20px}.pill{display:inline-block;background:#e7f4ff;color:#2162a8;border-radius:20px;padding:5px 11px;font-size:13px;font-weight:700}svg{max-width:100%;height:auto}#chart{width:100%;overflow:hidden}.empty{color:#77849b;text-align:center;padding:20px}.hint{font-size:12px;color:#7b8798;line-height:1.6}
-</style></head><body><main class="wrap"><div class="top"><div><h1>📚 テストのきろく</h1><div class="sub">がんばりを記録して、成長を見よう！</div></div><button id="logout" class="secondary small hide">ログアウト</button></div>
-<section id="auth" class="card"><h2>おうちの人とログイン</h2><p class="sub">記録はアカウントごとに保存されます。</p><label class="field">メールアドレス<input id="email" type="email" autocomplete="email" placeholder="example@email.com"></label><label class="field">パスワード<input id="password" type="password" autocomplete="current-password" placeholder="6文字以上"></label><div class="actions"><button id="login">ログイン</button><button id="signup" class="secondary">はじめて登録</button></div><p id="authMsg" class="msg" aria-live="polite"></p><p class="hint">登録時は確認メールが届く場合があります。保護者のメールアドレスを使ってください。</p></section>
-<div id="app" class="hide"><section class="card"><h2>これまでの記録</h2><div class="grid"><div class="metric"><span class="sub">テストの回数</span><strong id="count">0回</strong></div><div class="metric"><span class="sub">平均得点率</span><strong id="average">—</strong></div></div><p id="best" class="sub"></p></section>
-<section class="card"><h2 id="formTitle">✏️ テストを記録する</h2><form id="scoreForm"><label class="field">教科<select id="subject" required><option>国語</option><option>算数</option><option>理科</option><option>社会</option><option>英語</option><option>その他</option></select></label><label class="field">テストの範囲<input id="scope" maxlength="200" placeholder="例：小数のかけ算" required></label><label class="field">テストの日<input id="testDate" type="date" required></label><div class="grid"><label class="field">満点<input id="maxScore" type="number" min="0.01" max="10000" step="0.01" value="100" required></label><label class="field">自分の点数<input id="score" type="number" min="0" step="0.01" required></label></div><div class="actions"><button id="save" type="submit">記録を保存</button><button id="cancel" type="button" class="secondary hide">編集をやめる</button></div><p id="formMsg" class="msg" aria-live="polite"></p></form></section>
-<section class="card"><h2>📈 教科ごとの成長</h2><label class="field">教科を選ぶ<select id="filter"><option value="all">すべて</option><option>国語</option><option>算数</option><option>理科</option><option>社会</option><option>英語</option><option>その他</option></select></label><div id="chart"></div><p class="hint">得点率（得点÷満点）で比較します。テストの難しさが違うことにも注意しよう。</p></section>
-<section class="card"><h2>🗂 テストの点数表</h2><div id="records"></div></section></div></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.min.js"></script><script>
+
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>テストのきろく</title>
+<style>
+:root {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #24324a;
+  background: #f4f8ff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.wrap { max-width: 760px; margin: auto; padding: 18px 15px 60px; }
+h1 { font-size: 27px; margin: 8px 0; }
+h2 { font-size: 19px; margin: 0 0 15px; }
+.sub { color: #6b7890; font-size: 14px; }
+.card {
+  background: white;
+  border-radius: 22px;
+  padding: 21px;
+  margin: 16px 0;
+  box-shadow: 0 5px 20px #28466b0c;
+}
+.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.metric { background: #edf5ff; border-radius: 16px; padding: 16px; }
+.metric strong { font-size: 27px; display: block; color: #2259b4; }
+.field { display: block; margin: 13px 0; font-weight: 700; font-size: 14px; }
+input, select {
+  width: 100%; padding: 13px;
+  border: 2px solid #dce5f3;
+  border-radius: 13px;
+  font-size: 17px;
+  background: white;
+  margin-top: 6px;
+  color: #24324a;
+}
+button {
+  border: 0; border-radius: 13px;
+  padding: 13px 19px;
+  background: #3477dc;
+  color: white; font-size: 16px;
+  font-weight: 750; cursor: pointer;
+}
+button.secondary { background: #e8f0fb; color: #2855a0; }
+button.danger { background: #ffe7e7; color: #a93232; }
+button.small { font-size: 13px; padding: 8px 11px; }
+button:disabled { opacity: .55; }
+.actions { display: flex; gap: 9px; flex-wrap: wrap; }
+.hide { display: none !important; }
+.msg { min-height: 23px; color: #bb3547; font-size: 14px; }
+.success { color: #13825c; }
+.entry {
+  border-top: 1px solid #e9edf5;
+  padding: 14px 0;
+  display: flex; justify-content: space-between;
+  align-items: center; gap: 10px;
+}
+.entry strong { font-size: 17px; }
+.entry .sub { overflow-wrap: anywhere; }
+.score { font-size: 21px; font-weight: 800; color: #285ab3; white-space: nowrap; }
+.bar { height: 12px; background: #e6ecf5; border-radius: 20px; overflow: hidden; }
+.fill { height: 100%; background: #48a6dc; border-radius: 20px; }
+svg { max-width: 100%; height: auto; }
+#chart { width: 100%; overflow: hidden; }
+.empty { color: #77849b; text-align: center; padding: 20px; }
+.hint { font-size: 12px; color: #7b8798; line-height: 1.6; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="top">
+    <div>
+      <h1>📚 テストのきろく</h1>
+      <div class="sub">がんばりを記録して、成長を見よう！</div>
+    </div>
+    <button id="logout" class="secondary small hide">ログアウト</button>
+  </div>
+
+  <section id="auth" class="card">
+    <h2>おうちの人とログイン</h2>
+    <p class="sub">記録はアカウントごとに保存されます。</p>
+    <label class="field">メールアドレス
+      <input id="email" type="email" autocomplete="email" placeholder="example@email.com">
+    </label>
+    <label class="field">パスワード
+      <input id="password" type="password" autocomplete="current-password" placeholder="6文字以上">
+    </label>
+    <div class="actions">
+      <button id="login">ログイン</button>
+      <button id="signup" class="secondary">はじめて登録</button>
+    </div>
+    <p id="authMsg" class="msg" aria-live="polite"></p>
+    <p class="hint">登録時は確認メールが届く場合があります。保護者のメールアドレスを使ってください。</p>
+  </section>
+
+  <div id="app" class="hide">
+    <section class="card">
+      <h2>これまでの記録</h2>
+      <div class="grid">
+        <div class="metric">
+          <span class="sub">テストの回数</span>
+          <strong id="count">0回</strong>
+        </div>
+        <div class="metric">
+          <span class="sub">平均得点率</span>
+          <strong id="average">—</strong>
+        </div>
+      </div>
+      <p id="best" class="sub"></p>
+    </section>
+
+    <section class="card">
+      <h2 id="formTitle">✏️ テストを記録する</h2>
+      <form id="scoreForm">
+        <label class="field">教科
+          <select id="subject" required>
+            <option>国語</option><option>算数</option><option>理科</option>
+            <option>社会</option><option>英語</option><option>その他</option>
+          </select>
+        </label>
+        <label class="field">テストの範囲
+          <input id="scope" maxlength="200" placeholder="例：小数のかけ算" required>
+        </label>
+        <label class="field">テストの日
+          <input id="testDate" type="date" required>
+        </label>
+        <div class="grid">
+          <label class="field">満点
+            <input id="maxScore" type="number" min="0.01" max="10000" step="0.01" value="100" required>
+          </label>
+          <label class="field">自分の点数
+            <input id="score" type="number" min="0" step="0.01" required>
+          </label>
+        </div>
+        <div class="actions">
+          <button id="save" type="submit">記録を保存</button>
+          <button id="cancel" type="button" class="secondary hide">編集をやめる</button>
+        </div>
+        <p id="formMsg" class="msg" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>📈 教科ごとの成長</h2>
+      <label class="field">教科を選ぶ
+        <select id="filter">
+          <option value="all">すべて</option>
+          <option>国語</option><option>算数</option><option>理科</option>
+          <option>社会</option><option>英語</option><option>その他</option>
+        </select>
+      </label>
+      <div id="chart"></div>
+      <p class="hint">得点率（得点÷満点）で比較します。テストの難しさが違うことにも注意しよう。</p>
+    </section>
+
+    <section class="card">
+      <h2>🗂 テストの点数表</h2>
+      <div id="records"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+window.addEventListener('error', function(e) {
+  const m = document.getElementById('authMsg');
+  if (m) m.textContent = 'アプリの読み込みエラー：' + (e.message || '不明なエラー');
+});
+window.addEventListener('unhandledrejection', function(e) {
+  const m = document.getElementById('authMsg');
+  if (m) m.textContent = '通信エラー：' + (e.reason?.message || '接続を確認してください');
+});
+</script>
+
+<script
+  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.min.js"
+  onerror="document.getElementById('authMsg').textContent='Supabaseの読み込みに失敗しました。ネットワークを確認してください。'">
+</script>
+
+<script>
 'use strict';
-const URL='https://stvevspjxtycrdyzbxea.supabase.co';
-const KEY='sb_publishable_wsMEg-YDXFJJRBh8-qNm3Q_IHk7VR-c';
-const db=window.supabase.createClient(URL,KEY);
-const $=id=>document.getElementById(id);let items=[],editing=null,currentUser=null;
-const subjects=['国語','算数','理科','社会','英語','その他'];
-const pct=r=>r.score/r.max_score*100;
-const fmt=n=>Number(n).toLocaleString('ja-JP',{maximumFractionDigits:2});
-const errText=e=>e?.message||'通信に失敗しました';
-function showMessage(id,s,ok=false){$(id).textContent=s;$(id).className='msg'+(ok?' success':'')}
-function resetForm(){editing=null;$('scoreForm').reset();$('testDate').value=new Date().toLocaleDateString('sv-SE');$('maxScore').value=100;$('formTitle').textContent='✏️ テストを記録する';$('save').textContent='記録を保存';$('cancel').classList.add('hide');showMessage('formMsg','')}
-function node(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n}
-async function load(){const {data,error}=await db.from('test_scores').select('id,subject,scope,test_date,max_score,score,created_at').order('test_date',{ascending:false}).order('created_at',{ascending:false});if(error){showMessage('formMsg',errText(error));return}items=data||[];render()}
-function render(){const filtered=$('filter').value==='all'?items:items.filter(x=>x.subject===$('filter').value);$('count').textContent=items.length+'回';$('average').textContent=items.length?Math.round(items.reduce((a,r)=>a+pct(r),0)/items.length)+'%':'—';$('best').textContent=filtered.length?'この教科の自己ベスト：'+fmt(Math.max(...filtered.map(pct)))+'%':'';renderChart(filtered);const root=$('records');root.replaceChildren();if(!filtered.length){root.append(node('div','empty','まだ記録がありません。テストを登録しよう！'));return}for(const r of filtered){const row=node('div','entry'),left=node('div'),right=node('div');left.append(node('strong','',r.subject+' ・ '+r.scope),node('div','sub',r.test_date));const bar=node('div','bar');const fill=node('div','fill');fill.style.width=Math.max(0,Math.min(100,pct(r)))+'%';bar.append(fill);left.append(bar);right.append(node('div','score',fmt(r.score)+' / '+fmt(r.max_score)),node('div','sub',fmt(pct(r))+'%'));const actions=node('div','actions');const edit=node('button','secondary small','編集');edit.onclick=()=>editRecord(r);const del=node('button','danger small','削除');del.onclick=()=>removeRecord(r);actions.append(edit,del);right.append(actions);row.append(left,right);root.append(row)}}
-function renderChart(data){const root=$('chart');root.replaceChildren();const ordered=[...data].sort((a,b)=>a.test_date.localeCompare(b.test_date));if(!ordered.length){root.append(node('div','empty','記録するとグラフが表示されます'));return}const width=620,height=230,pad=36,usable=width-pad*2;const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox',`0 0 ${width} ${height}`);svg.setAttribute('role','img');svg.setAttribute('aria-label','テスト得点率の推移');function line(x1,y1,x2,y2,color){const l=document.createElementNS(svg.namespaceURI,'line');for(const [k,v] of Object.entries({x1,y1,x2,y2,stroke:color,'stroke-width':1}))l.setAttribute(k,v);svg.append(l)}function txt(x,y,value){const t=document.createElementNS(svg.namespaceURI,'text');t.setAttribute('x',x);t.setAttribute('y',y);t.setAttribute('font-size',12);t.setAttribute('fill','#78869b');t.textContent=value;svg.append(t)}for(let p=0;p<=100;p+=25){const y=height-pad-(p/100)*(height-pad*2);line(pad,y,width-pad,y,'#e3eaf4');txt(0,y+4,p+'%')}const pts=ordered.map((r,i)=>({x:ordered.length===1?width/2:pad+i*usable/(ordered.length-1),y:height-pad-Math.min(100,pct(r))/100*(height-pad*2),p:pct(r)}));for(let i=1;i<pts.length;i++)line(pts[i-1].x,pts[i-1].y,pts[i].x,pts[i].y,'#3176d7');for(const p of pts){const c=document.createElementNS(svg.namespaceURI,'circle');c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',5);c.setAttribute('fill','#3176d7');const title=document.createElementNS(svg.namespaceURI,'title');title.textContent=fmt(p.p)+'%';c.append(title);svg.append(c)}root.append(svg)}
-function editRecord(r){editing=r.id;$('subject').value=r.subject;$('scope').value=r.scope;$('testDate').value=r.test_date;$('maxScore').value=r.max_score;$('score').value=r.score;$('formTitle').textContent='✏️ 記録を編集する';$('save').textContent='変更を保存';$('cancel').classList.remove('hide');window.scrollTo({top:$('scoreForm').getBoundingClientRect().top+window.scrollY-90,behavior:'smooth'})}
-async function removeRecord(r){if(!confirm(`${r.subject}「${r.scope}」の記録を削除しますか？`))return;const {error}=await db.from('test_scores').delete().eq('id',r.id);if(error){alert(errText(error));return}await load()}
-$('scoreForm').onsubmit=async e=>{e.preventDefault();if(!currentUser)return;const max=Number($('maxScore').value),score=Number($('score').value);if(!Number.isFinite(max)||max<=0||max>10000||!Number.isFinite(score)||score<0||score>max){showMessage('formMsg','点数は0以上、満点以下にしてください');return}const record={subject:$('subject').value,scope:$('scope').value.trim(),test_date:$('testDate').value,max_score:max,score};if(!record.scope){showMessage('formMsg','テスト範囲を入力してください');return}const btn=$('save');btn.disabled=true;try{const result=editing?await db.from('test_scores').update(record).eq('id',editing):await db.from('test_scores').insert({...record,user_id:currentUser.id});if(result.error)throw result.error;resetForm();await load();showMessage('formMsg','保存できました！',true)}catch(e){showMessage('formMsg',errText(e))}finally{btn.disabled=false}};
-$('cancel').onclick=resetForm;$('filter').onchange=render;
-$('login').onclick=async()=>{showMessage('authMsg','');const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)showMessage('authMsg',errText(error))};
-$('signup').onclick=async()=>{showMessage('authMsg','');const {error,data}=await db.auth.signUp({email:$('email').value.trim(),password:$('password').value});if(error)showMessage('authMsg',errText(error));else showMessage('authMsg',data.session?'登録できました！':'確認メールを確認してください。',true)};
-$('logout').onclick=async()=>{const {error}=await db.auth.signOut();if(error)alert(errText(error))};
-async function sessionChanged(session){currentUser=session?.user||null;$('auth').classList.toggle('hide',!!currentUser);$('app').classList.toggle('hide',!currentUser);$('logout').classList.toggle('hide',!currentUser);if(currentUser){resetForm();await load()}else{items=[];$('records').replaceChildren()}}
-db.auth.onAuthStateChange((event,session)=>{setTimeout(()=>sessionChanged(session),0)});resetForm();
-</script></body></html>
+
+const URL = 'https://stvevspjxtycrdyzbxea.supabase.co';
+const KEY = 'sb_publishable_wsMEg-YDXFJJRBh8-qNm3Q_IHk7VR-c';
+
+if (!window.supabase) {
+  document.getElementById('authMsg').textContent =
+    'Supabaseの読み込みに失敗しました。ページを再読み込みしてください。';
+  throw new Error('Supabase library unavailable');
+}
+
+const db = window.supabase.createClient(URL, KEY);
+const $ = id => document.getElementById(id);
+let items = [], editing = null, currentUser = null;
+
+const pct = r => r.score / r.max_score * 100;
+const fmt = n => Number(n).toLocaleString('ja-JP', { maximumFractionDigits: 2 });
+const errText = e => e?.message || '通信に失敗しました';
+
+function showMessage(id, s, ok = false) {
+  $(id).textContent = s;
+  $(id).className = 'msg' + (ok ? ' success' : '');
+}
+
+function resetForm() {
+  editing = null;
+  $('scoreForm').reset();
+  $('testDate').value = new Date().toLocaleDateString('sv-SE');
+  $('maxScore').value = 100;
+  $('formTitle').textContent = '✏️ テストを記録する';
+  $('save').textContent = '記録を保存';
+  $('cancel').classList.add('hide');
+  showMessage('formMsg', '');
+}
+
+function node(tag, cls, value) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (value !== undefined) n.textContent = value;
+  return n;
+}
+
+async function load() {
+  const { data, error } = await db.from('test_scores')
+    .select('id,subject,scope,test_date,max_score,score,created_at')
+    .order('test_date', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) {
+    showMessage('formMsg', errText(error));
+    return;
+  }
+  items = data || [];
+  render();
+}
+
+function render() {
+  const filtered = $('filter').value === 'all'
+    ? items : items.filter(x => x.subject === $('filter').value);
+
+  $('count').textContent = items.length + '回';
+  $('average').textContent = items.length
+    ? Math.round(items.reduce((a, r) => a + pct(r), 0) / items.length) + '%'
+    : '—';
+  $('best').textContent = filtered.length
+    ? 'この教科の自己ベスト：' + fmt(Math.max(...filtered.map(pct))) + '%'
+    : '';
+
+  renderChart(filtered);
+  const root = $('records');
+  root.replaceChildren();
+
+  if (!filtered.length) {
+    root.append(node('div', 'empty', 'まだ記録がありません。テストを登録しよう！'));
+    return;
+  }
+
+  for (const r of filtered) {
+    const row = node('div', 'entry');
+    const left = node('div');
+    const right = node('div');
+
+    left.append(
+      node('strong', '', r.subject + ' ・ ' + r.scope),
+      node('div', 'sub', r.test_date)
+    );
+
+    const bar = node('div', 'bar');
+    const fill = node('div', 'fill');
+    fill.style.width = Math.max(0, Math.min(100, pct(r))) + '%';
+    bar.append(fill);
+    left.append(bar);
+
+    right.append(
+      node('div', 'score', fmt(r.score) + ' / ' + fmt(r.max_score)),
+      node('div', 'sub', fmt(pct(r)) + '%')
+    );
+
+    const actions = node('div', 'actions');
+    const edit = node('button', 'secondary small', '編集');
+    edit.onclick = () => editRecord(r);
+    const del = node('button', 'danger small', '削除');
+    del.onclick = () => removeRecord(r);
+    actions.append(edit, del);
+    right.append(actions);
+    row.append(left, right);
+    root.append(row);
+  }
+}
+
+function renderChart(data) {
+  const root = $('chart');
+  root.replaceChildren();
+  const ordered = [...data].sort((a, b) => a.test_date.localeCompare(b.test_date));
+
+  if (!ordered.length) {
+    root.append(node('div', 'empty', '記録するとグラフが表示されます'));
+    return;
+  }
+
+  const width = 620, height = 230, pad = 36;
+  const usable = width - pad * 2;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', 'テスト得点率の推移');
+
+  function line(x1, y1, x2, y2, color) {
+    const l = document.createElementNS(svg.namespaceURI, 'line');
+    for (const [k, v] of Object.entries({
+      x1, y1, x2, y2, stroke: color, 'stroke-width': 1
+    })) l.setAttribute(k, v);
+    svg.append(l);
+  }
+
+  function txt(x, y, value) {
+    const t = document.createElementNS(svg.namespaceURI, 'text');
+    t.setAttribute('x', x);
+    t.setAttribute('y', y);
+    t.setAttribute('font-size', 12);
+    t.setAttribute('fill', '#78869b');
+    t.textContent = value;
+    svg.append(t);
+  }
+
+  for (let p = 0; p <= 100; p += 25) {
+    const y = height - pad - p / 100 * (height - pad * 2);
+    line(pad, y, width - pad, y, '#e3eaf4');
+    txt(0, y + 4, p + '%');
+  }
+
+  const pts = ordered.map((r, i) => ({
+    x: ordered.length === 1 ? width / 2 : pad + i * usable / (ordered.length - 1),
+    y: height - pad - Math.min(100, pct(r)) / 100 * (height - pad * 2),
+    p: pct(r)
+  }));
+
+  for (let i = 1; i < pts.length; i++) {
+    line(pts[i-1].x, pts[i-1].y, pts[i].x, pts[i].y, '#3176d7');
+  }
+
+  for (const p of pts) {
+    const c = document.createElementNS(svg.namespaceURI, 'circle');
+    c.setAttribute('cx', p.x);
+    c.setAttribute('cy', p.y);
+    c.setAttribute('r', 5);
+    c.setAttribute('fill', '#3176d7');
+    const title = document.createElementNS(svg.namespaceURI, 'title');
+    title.textContent = fmt(p.p) + '%';
+    c.append(title);
+    svg.append(c);
+  }
+  root.append(svg);
+}
+
+function editRecord(r) {
+  editing = r.id;
+  $('subject').value = r.subject;
+  $('scope').value = r.scope;
+  $('testDate').value = r.test_date;
+  $('maxScore').value = r.max_score;
+  $('score').value = r.score;
+  $('formTitle').textContent = '✏️ 記録を編集する';
+  $('save').textContent = '変更を保存';
+  $('cancel').classList.remove('hide');
+  window.scrollTo({
+    top: $('scoreForm').getBoundingClientRect().top + window.scrollY - 90,
+    behavior: 'smooth'
+  });
+}
+
+async function removeRecord(r) {
+  if (!confirm(`${r.subject}「${r.scope}」の記録を削除しますか？`)) return;
+  const { error } = await db.from('test_scores').delete().eq('id', r.id);
+  if (error) { alert(errText(error)); return; }
+  await load();
+}
+
+$('scoreForm').onsubmit = async e => {
+  e.preventDefault();
+  if (!currentUser) return;
+
+  const max = Number($('maxScore').value);
+  const score = Number($('score').value);
+  if (!Number.isFinite(max) || max <= 0 || max > 10000 ||
+      !Number.isFinite(score) || score < 0 || score > max) {
+    showMessage('formMsg', '点数は0以上、満点以下にしてください');
+    return;
+  }
+
+  const record = {
+    subject: $('subject').value,
+    scope: $('scope').value.trim(),
+    test_date: $('testDate').value,
+    max_score: max,
+    score
+  };
+
+  if (!record.scope) {
+    showMessage('formMsg', 'テスト範囲を入力してください');
+    return;
+  }
+
+  const btn = $('save');
+  btn.disabled = true;
+  try {
+    const result = editing
+      ? await db.from('test_scores').update(record).eq('id', editing)
+      : await db.from('test_scores').insert({ ...record, user_id: currentUser.id });
+    if (result.error) throw result.error;
+    resetForm();
+    await load();
+    showMessage('formMsg', '保存できました！', true);
+  } catch (e) {
+    showMessage('formMsg', errText(e));
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+$('cancel').onclick = resetForm;
+$('filter').onchange = render;
+
+$('login').onclick = async () => {
+  showMessage('authMsg', 'ログインしています…');
+  try {
+    const { error } = await db.auth.signInWithPassword({
+      email: $('email').value.trim(),
+      password: $('password').value
+    });
+    if (error) throw error;
+    showMessage('authMsg', 'ログインしました。', true);
+  } catch (e) {
+    showMessage('authMsg', errText(e));
+  }
+};
+
+$('signup').onclick = async () => {
+  showMessage('authMsg', '登録を処理しています…');
+  const email = $('email').value.trim();
+  const password = $('password').value;
+
+  if (!email || !password) {
+    showMessage('authMsg', 'メールアドレスとパスワードを入力してください。');
+    return;
+  }
+
+  try {
+    const { error, data } = await db.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: 'https://t71316372-crypto.github.io/test-score-tracker/'
+      }
+    });
+    if (error) throw error;
+    showMessage('authMsg',
+      data.session ? '登録できました！' : '確認メールを確認してください。',
+      true);
+  } catch (e) {
+    showMessage('authMsg', errText(e));
+  }
+};
+
+$('logout').onclick = async () => {
+  const { error } = await db.auth.signOut();
+  if (error) alert(errText(error));
+};
+
+async function sessionChanged(session) {
+  currentUser = session?.user || null;
+  $('auth').classList.toggle('hide', !!currentUser);
+  $('app').classList.toggle('hide', !currentUser);
+  $('logout').classList.toggle('hide', !currentUser);
+  if (currentUser) {
+    resetForm();
+    await load();
+  } else {
+    items = [];
+    $('records').replaceChildren();
+  }
+}
+
+db.auth.onAuthStateChange((event, session) => {
+  setTimeout(() => sessionChanged(session), 0);
+});
+resetForm();
+</script>
+</body>
+</html>
